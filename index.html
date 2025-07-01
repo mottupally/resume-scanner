@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Job Matcher</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            max-width: 720px;
+            line-height: 1.5;
+            color: #333;
+            background: #f7f9fc;
+        }
+
+        h1, h2 {
+            color: #222;
+            text-align: center;
+        }
+
+        form {
+            margin-bottom: 30px;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            padding: 10px;
+            font-family: inherit;
+            font-size: 1rem;
+            resize: vertical;
+            box-sizing: border-box;
+        }
+
+        button {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background-color: #2a9df4;
+            border: none;
+            color: white;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #2177cc;
+        }
+
+        ul {
+            list-style: none;
+            padding-left: 0;
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.1);
+            min-height: 60px;
+        }
+
+        li {
+            font-size: 1.05rem;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
+
+        li:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Resume Scanner and Job Matcher</h1>
+    <form id="matchForm">
+        <label for="resume_text">Paste your resume text:</label>
+        <textarea id="resume_text" name="resume_text" required placeholder="E.g. Experienced Data Scientist with Python and Machine Learning skills."></textarea>
+        <button type="submit">Match Jobs</button>
+    </form>
+
+    <h2>Matched Jobs</h2>
+    <ul id="matchedJobs">
+        <li>Please submit your resume to see matching jobs.</li>
+    </ul>
+
+    <script>
+        // Sample job data
+        const jobs = [
+            {id: 1, title: "Data Scientist", description: "Looking for a Data Scientist with Python and Machine Learning experience."},
+            {id: 2, title: "Software Engineer", description: "Seeking a Software Engineer proficient in Java and Spring."},
+            {id: 3, title: "Web Developer", description: "Web Developer with experience in HTML, CSS, and JavaScript."},
+            {id: 4, title: "Data Analyst", description: "Data Analyst with skills in SQL and data visualization."}
+        ];
+
+        // Function to extract words from text
+        function getWords(text) {
+            return text.toLowerCase().match(/\b\w+\b/g) || [];
+        }
+
+        // Function to calculate term frequency
+        function getTermFreq(words) {
+            const freqs = {};
+            words.forEach(word => {
+                freqs[word] = (freqs[word] || 0) + 1;
+            });
+            return freqs;
+        }
+
+        // Function to calculate cosine similarity
+        function cosineSimilarity(freqsA, freqsB) {
+            const allWords = new Set([...Object.keys(freqsA), ...Object.keys(freqsB)]);
+            let dot = 0, magA = 0, magB = 0;
+            allWords.forEach(word => {
+                const a = freqsA[word] || 0;
+                const b = freqsB[word] || 0;
+                dot += a * b;
+                magA += a * a;
+                magB += b * b;
+            });
+            if (magA === 0 || magB === 0) return 0;
+            return dot / (Math.sqrt(magA) * Math.sqrt(magB));
+        }
+
+        // Event listener for form submission
+        document.getElementById('matchForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            const resumeText = e.target.resume_text.value.trim();
+            if (!resumeText) {
+                alert('Please enter your resume text.');
+                return;
+            }
+
+            const resumeFreq = getTermFreq(getWords(resumeText));
+            const scoredJobs = jobs.map(job => {
+                const jobFreq = getTermFreq(getWords(job.description));
+                const score = cosineSimilarity(resumeFreq, jobFreq);
+                return {...job, score};
+            });
+
+            scoredJobs.sort((a, b) => b.score - a.score);
+            displayMatches(scoredJobs);
+        });
+
+        // Function to display matched jobs
+        function displayMatches(scoredJobs) {
+            const matchedJobsEl = document.getElementById('matchedJobs');
+            matchedJobsEl.innerHTML = '';
+            if (scoredJobs.length === 0) {
+                const li = document.createElement('li');
+                li.textContent = "No jobs found.";
+                matchedJobsEl.appendChild(li);
+                return;
+            }
+            scoredJobs.forEach(job => {
+                const li = document.createElement('li');
+                li.textContent = `${job.title} - Match Score: ${job.score.toFixed(3)}`;
+                matchedJobsEl.appendChild(li);
+            });
+        }
+    </script>
+</body>
+</html>
